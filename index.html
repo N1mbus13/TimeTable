@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CMR Timetable Planner</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════
+     LOGIN PAGE
+═══════════════════════════════════════ -->
+<div id="login-page">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="logo-badge">
+        <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6L23 9 12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/>
+        </svg>
+      </div>
+      <h1>CMR University</h1>
+      <p>Timetable Management System</p>
+    </div>
+
+    <div class="role-tabs">
+      <button class="role-tab active" onclick="setRole('teacher')">👨‍🏫 Teacher</button>
+      <button class="role-tab" onclick="setRole('student')">🎓 Student</button>
+    </div>
+
+    <div id="login-error" class="login-error"></div>
+
+    <div class="form-group">
+      <label>Username</label>
+      <input type="text" id="login-username" class="form-input" placeholder="Enter your username"/>
+    </div>
+    <div class="form-group">
+      <label>Password</label>
+      <input type="password" id="login-password" class="form-input" placeholder="Enter your password"/>
+    </div>
+    <button class="login-btn" onclick="doLogin()">Sign In →</button>
+    <p class="login-hint">Teacher: admin / admin123 &nbsp;|&nbsp; Student: student / student123</p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     APP PAGE
+═══════════════════════════════════════ -->
+<div id="app-page">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6L23 9 12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72L12 15l5-2.73v3.72z"/></svg>
+      </div>
+      <div>
+        <div class="topbar-title">CMR Timetable Planner</div>
+        <div class="topbar-subtitle">College Scheduling System</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span id="role-badge" class="role-badge"></span>
+      <span id="user-name-display" style="font-size:0.85rem;font-weight:600;color:#475569;"></span>
+      <button class="logout-btn" onclick="doLogout()">Logout</button>
+    </div>
+  </div>
+
+  <!-- Nav Tabs (teacher only) -->
+  <div class="nav-tabs" id="nav-tabs">
+    <button class="nav-tab active" onclick="showTab('timetables')">📅 Timetables</button>
+    <button class="nav-tab" onclick="showTab('classes')">🏫 Manage Classes</button>
+    <button class="nav-tab" onclick="showTab('subjects')">📘 Subjects & Teachers</button>
+  </div>
+
+  <div class="main-content">
+    <div id="toast"></div>
+
+    <!-- ── TIMETABLES TAB ──────────────────────── -->
+    <div id="tab-timetables" class="tab-section active">
+
+      <!-- Student class picker -->
+      <div id="student-picker" style="display:none;" class="panel">
+        <div class="panel-header"><span class="icon icon-blue">🎓</span> View Class Timetable</div>
+        <div class="class-picker-row">
+          <label>Select Class:</label>
+          <select id="student-class-select" class="app-select" onchange="renderStudentView()"></select>
+          <button class="btn btn-blue" onclick="downloadStudentPDF()">📥 Download PDF</button>
+        </div>
+      </div>
+
+      <div id="timetables-container"></div>
+    </div>
+
+    <!-- ── CLASSES TAB ─────────────────────────── -->
+    <div id="tab-classes" class="tab-section">
+      <div class="panel">
+        <div class="panel-header"><span class="icon icon-purple">🏫</span> Manage Classes</div>
+        <div class="input-row">
+          <input type="text" id="class-input" class="app-input" placeholder="Enter class name (e.g. Cloud Computing A)"/>
+          <button class="btn btn-green" onclick="addClass()">+ Add Class</button>
+        </div>
+        <ul id="class-list" class="item-list"></ul>
+      </div>
+    </div>
+
+    <!-- ── SUBJECTS TAB ────────────────────────── -->
+    <div id="tab-subjects" class="tab-section">
+      <div class="two-col">
+        <!-- Subject panel -->
+        <div class="panel">
+          <div class="panel-header"><span class="icon icon-blue">📘</span> Manage Subjects</div>
+          <div class="input-row">
+            <input type="text" id="subject-input" class="app-input" placeholder="New subject name"/>
+            <button class="btn btn-green" onclick="addSubject()">+ Add</button>
+          </div>
+          <ul id="subject-list" class="item-list"></ul>
+        </div>
+        <!-- Teacher panel -->
+        <div class="panel">
+          <div class="panel-header"><span class="icon icon-green">👨‍🏫</span> Manage Teachers</div>
+          <div class="input-row">
+            <select id="subject-picker" class="app-select" onchange="renderTeacherList()">
+              <option value="">— Select Subject —</option>
+            </select>
+          </div>
+          <div class="input-row">
+            <input type="text" id="teacher-input" class="app-input" placeholder="Teacher name"/>
+            <button class="btn btn-green" onclick="addTeacher()">+ Add</button>
+          </div>
+          <ul id="teacher-list" class="item-list"></ul>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main-content -->
+</div><!-- /app-page -->
+
+<script src="script.js"></script>
+</body>
+</html>
